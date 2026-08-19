@@ -126,6 +126,12 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .trainer-frame.landscape { width: min(96%, 470px); aspect-ratio: 16 / 9; }
 .trainer-frame.portrait { height: min(315px, 70vw); aspect-ratio: 9 / 16; }
 .trainer-frame video, .trainer-frame iframe { width: 100%; height: 100%; display: block; border: 0; object-fit: cover; }
+.trainer-launch { position: relative; width: 100%; height: 100%; display: grid; place-items: center; overflow: hidden; padding: 0; border: 0; background: #111613; color: white; cursor: pointer; }
+.trainer-launch img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: brightness(.7) saturate(.9); transition: transform .25s ease, filter .25s ease; }
+.trainer-launch > span { position: relative; z-index: 1; width: 58px; height: 58px; display: grid; place-items: center; padding-left: 4px; border-radius: 50%; background: var(--accent, #dfff62); color: #142019; font-size: 19px; box-shadow: 0 12px 32px rgba(0,0,0,.3); transition: transform .2s ease; }
+.trainer-launch > strong { position: absolute; z-index: 1; left: 50%; bottom: 21px; transform: translateX(-50%); white-space: nowrap; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; text-shadow: 0 2px 8px #000; }
+.trainer-launch:hover img { transform: scale(1.025); filter: brightness(.78) saturate(1); }
+.trainer-launch:hover > span { transform: scale(1.06); }
 .trainer-source { position: absolute; z-index: 3; left: 9px; bottom: 9px; max-width: calc(100% - 18px); border-radius: 999px; padding: 5px 8px; background: rgba(12,17,14,.76); color: #fff; font-size: 8px; font-weight: 850; line-height: 1; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; backdrop-filter: blur(7px); }
 .trainer-source:hover { background: rgba(12,17,14,.92); }
 .trainer-poster { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; background: #111613; }
