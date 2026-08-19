@@ -120,13 +120,11 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .motion-toggle span { color: var(--accent, #7e6af2); margin-right: 3px; }
 .exercise-visual.paused *, .exercise-visual.paused *::before, .exercise-visual.paused *::after { animation-play-state: paused !important; }
 
-.personal-squat-motion { position: relative; z-index: 1; width: min(76%, 360px); aspect-ratio: 1; overflow: hidden; border-radius: 17px; background: #f7f4ec; box-shadow: 0 17px 42px rgba(24,34,30,.11); }
-.personal-squat-motion:not(.compact) img { width: 600%; max-width: none; height: 100%; display: block; animation: personalSquatFrames 3.6s steps(5, end) infinite; }
-.personal-squat-motion.compact { width: 100%; border-radius: 15px; box-shadow: none; }
+.personal-squat-motion { position: relative; z-index: 1; height: min(315px, 70vw); aspect-ratio: 3 / 4; overflow: hidden; border-radius: 17px; background: #f7f4ec; box-shadow: 0 17px 42px rgba(24,34,30,.11); }
+.personal-squat-motion canvas { width: 100%; height: 100%; display: block; }
+.personal-squat-motion.compact { width: 100%; height: auto; aspect-ratio: 3 / 2; border-radius: 15px; box-shadow: none; }
 .personal-squat-motion.compact img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .exercise-visual.compact.realistic { background: #f7f4ec; }
-
-@keyframes personalSquatFrames { from { transform: translateX(0); } to { transform: translateX(-83.333333%); } }
 
 /* Joint-driven Motion template for the goblet squat. */
 .squat-motion .skeleton-limb, .squat-motion .skeleton-torso, .squat-motion .skeleton-shoulders { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }

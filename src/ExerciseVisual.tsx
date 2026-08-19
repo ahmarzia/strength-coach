@@ -128,9 +128,63 @@ function GobletSquatMotion({ paused }: { paused: boolean }) {
   </svg>;
 }
 
-function PersonalGobletSquat({ compact = false }: { compact?: boolean }) {
-  return <div className={`personal-squat-motion ${compact ? "compact" : ""}`} role="img" aria-label="Personalized goblet squat showing the standing and bottom positions">
-    <img src={compact ? "./assets/personal-goblet-squat.webp" : "./assets/personal-goblet-squat-sprite.webp"} alt={compact ? "Personalized goblet squat start and bottom positions" : "Animated personalized goblet squat"} decoding="async" />
+function SmoothSquatCanvas({ paused }: { paused: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const progressRef = useRef(0);
+  const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext("2d");
+    if (!canvas || !context) return;
+
+    const sheet = new Image();
+    sheet.src = "./assets/personal-goblet-squat-8.webp";
+    const sequence = [0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1];
+    let frameRequest = 0;
+    let lastTime = performance.now();
+
+    const drawFrame = (frame: number, opacity: number) => {
+      const cellWidth = sheet.naturalWidth / 4;
+      const cellHeight = sheet.naturalHeight / 2;
+      const column = frame % 4;
+      const row = Math.floor(frame / 4);
+      context.globalAlpha = opacity;
+      context.drawImage(sheet, column * cellWidth, row * cellHeight, cellWidth, cellHeight, 0, 0, canvas.width, canvas.height);
+    };
+
+    const render = (now: number) => {
+      const delta = Math.min(50, now - lastTime);
+      lastTime = now;
+      if (!paused && !reduceMotion) progressRef.current = (progressRef.current + delta / 4200) % 1;
+
+      const position = progressRef.current * sequence.length;
+      const slot = Math.floor(position) % sequence.length;
+      const blend = position - Math.floor(position);
+      const easedBlend = blend * blend * (3 - 2 * blend);
+      const currentFrame = sequence[slot];
+      const nextFrame = sequence[(slot + 1) % sequence.length];
+
+      context.globalAlpha = 1;
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      drawFrame(currentFrame, 1);
+      drawFrame(nextFrame, easedBlend);
+      context.globalAlpha = 1;
+      frameRequest = requestAnimationFrame(render);
+    };
+
+    sheet.onload = () => { frameRequest = requestAnimationFrame(render); };
+    return () => cancelAnimationFrame(frameRequest);
+  }, [paused, reduceMotion]);
+
+  return <canvas ref={canvasRef} width="384" height="512" aria-label="Smooth animated personalized goblet squat" />;
+}
+
+function PersonalGobletSquat({ compact = false, paused = false }: { compact?: boolean; paused?: boolean }) {
+  return <div className={`personal-squat-motion ${compact ? "compact" : ""}`} role="img" aria-label="Personalized goblet squat demonstration">
+    {compact
+      ? <img src="./assets/personal-goblet-squat.webp" alt="Personalized goblet squat start and bottom positions" decoding="async" />
+      : <SmoothSquatCanvas paused={paused} />}
   </div>;
 }
 
@@ -156,7 +210,7 @@ export default function ExerciseVisual({ kind, compact = false }: Props) {
         <span><i aria-hidden="true" /> FORM DEMO</span>
         <small>1 CONTROLLED REP</small>
       </div>
-      {kind === "squat" ? <PersonalGobletSquat /> : <svg viewBox="0 0 180 190" role="img">
+      {kind === "squat" ? <PersonalGobletSquat paused={paused} /> : <svg viewBox="0 0 180 190" role="img">
           <path className="motion-orbit" d="M28 84C38 23 139 19 153 81" />
           <path className="motion-orbit-arrow" d="M145 73L153 82L160 72" />
           <g className="motion-frame motion-start"><Pose kind={kind} finish={false} x={35} /></g>
