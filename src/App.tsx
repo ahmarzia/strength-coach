@@ -180,7 +180,7 @@ export default function Home() {
       <section className="session-content">
         <div className="exercise-count"><span>{current + 1} OF {workout.exercises.length}</span><b>{exercise.pair}</b></div>
         <div className="session-name"><div><p>{exercise.focus}</p><h1>{exercise.name}</h1></div><button onClick={() => setGuide(!guide)}>{guide ? "Hide guide" : "Form guide"}</button></div>
-        <ExerciseVisual kind={exercise.visual} />
+        <ExerciseVisual exerciseId={exercise.id} kind={exercise.visual} />
         <div className={`form-guide ${guide ? "open" : ""}`}>
           <div><span className="eyebrow">HOW TO MOVE</span><ol>{exercise.steps.map((step) => <li key={step}>{step}</li>)}</ol></div>
           <div className="cue-panel"><span className="eyebrow">QUICK CUES</span><div className="cue-list">{exercise.cues.map((cue) => <span key={cue}>{cue}</span>)}</div><p><strong>Avoid:</strong> {exercise.avoid}</p></div>
@@ -241,11 +241,11 @@ export default function Home() {
             <div className="hero-stats"><div><strong>{workout.exercises.length}</strong><span>Exercises</span></div><div><strong>{totalSets}</strong><span>Working sets</span></div><div><strong>{goal.rir}</strong><span>Reps in reserve</span></div></div>
             <button className="hero-button" onClick={() => start()}>Start workout <span>→</span></button>
           </div>
-          <div className="hero-visual"><div className="hero-orbit"><strong>{String(daysPerWeek).padStart(2, "0")}</strong><small>DAYS<br />PER WEEK</small></div><ExerciseVisual kind={workout.exercises[0].visual} /></div>
+          <div className="hero-visual"><div className="hero-orbit"><strong>{String(daysPerWeek).padStart(2, "0")}</strong><small>DAYS<br />PER WEEK</small></div><ExerciseVisual exerciseId={workout.exercises[0].id} kind={workout.exercises[0].visual} /></div>
         </section>
         <div className="section-heading"><div><span>TODAY&apos;S FLOW</span><h2>{workout.exercises.length} focused movements</h2></div><button onClick={() => setView("plan")}>View full plan →</button></div>
         <section className="preview-grid">{workout.exercises.map((item, index) => <article key={item.id}>
-          <div className="preview-meta"><span>{item.pair}</span><small>{item.focus}</small></div><ExerciseVisual kind={item.visual} compact /><h3>{item.name}</h3><p>{item.sets} sets × {item.reps} reps</p><button onClick={() => start(dayIndex, index)}>View guide <span>↗</span></button>
+          <div className="preview-meta"><span>{item.pair}</span><small>{item.focus}</small></div><ExerciseVisual exerciseId={item.id} kind={item.visual} compact /><h3>{item.name}</h3><p>{item.sets} sets × {item.reps} reps</p><button onClick={() => start(dayIndex, index)}>View guide <span>↗</span></button>
         </article>)}</section>
       </div>}
 
@@ -257,7 +257,7 @@ export default function Home() {
           <div className="plan-head"><div><span>DAY {workout.day} · {workout.label}</span><h2>{workout.title}</h2><p>{workout.description}</p></div><button className="button primary" onClick={() => start()}>Start day {workout.day} →</button></div>
           <div className="plan-exercises">{workout.exercises.map((item) => <details key={item.id}>
             <summary><span className="pair-badge">{item.pair}</span><div><strong>{item.name}</strong><small>{item.focus}</small></div><div className="prescription"><strong>{item.sets} × {item.reps}</strong><small>{item.rest}s rest</small></div><span className="expand">＋</span></summary>
-            <div className="details-body"><ExerciseVisual kind={item.visual} /><div><span className="eyebrow">STEP BY STEP</span><ol>{item.steps.map((step) => <li key={step}>{step}</li>)}</ol><div className="cue-list">{item.cues.map((cue) => <span key={cue}>{cue}</span>)}</div><p className="avoid"><strong>Avoid:</strong> {item.avoid}</p></div></div>
+            <div className="details-body"><ExerciseVisual exerciseId={item.id} kind={item.visual} /><div><span className="eyebrow">STEP BY STEP</span><ol>{item.steps.map((step) => <li key={step}>{step}</li>)}</ol><div className="cue-list">{item.cues.map((cue) => <span key={cue}>{cue}</span>)}</div><p className="avoid"><strong>Avoid:</strong> {item.avoid}</p></div></div>
           </details>)}</div>
         </section>
       </div>}

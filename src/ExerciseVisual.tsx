@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
+import { exerciseMedia, type ExerciseMedia } from "./exerciseMedia";
 
-type Props = { kind: string; compact?: boolean };
+type Props = { kind: string; exerciseId?: string; compact?: boolean };
 
 function DB({ x, y, rotate = 0 }: { x: number; y: number; rotate?: number }) {
   return <g className="weight" transform={`translate(${x} ${y}) rotate(${rotate})`}><line x1="-7" y1="0" x2="7" y2="0" /><rect x="-11" y="-5" width="4" height="10" rx="1" /><rect x="7" y="-5" width="4" height="10" rx="1" /></g>;
@@ -128,71 +129,57 @@ function GobletSquatMotion({ paused }: { paused: boolean }) {
   </svg>;
 }
 
-function SmoothSquatCanvas({ paused }: { paused: boolean }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const progressRef = useRef(0);
+function TrainerMedia({ media, paused, compact = false }: { media: ExerciseMedia; paused: boolean; compact?: boolean }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const reduceMotion = useReducedMotion();
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    const context = canvas?.getContext("2d");
-    if (!canvas || !context) return;
+    const video = videoRef.current;
+    if (video) {
+      if (paused || reduceMotion) video.pause();
+      else void video.play().catch(() => { /* Muted inline playback may wait for the first user interaction. */ });
+    }
 
-    const sheet = new Image();
-    sheet.src = "./assets/personal-goblet-squat-8.webp";
-    const sequence = [0, 1, 2, 3, 4, 5, 6, 7, 6, 5, 4, 3, 2, 1];
-    let frameRequest = 0;
-    let lastTime = performance.now();
-
-    const drawFrame = (frame: number, opacity: number) => {
-      const cellWidth = sheet.naturalWidth / 4;
-      const cellHeight = sheet.naturalHeight / 2;
-      const column = frame % 4;
-      const row = Math.floor(frame / 4);
-      context.globalAlpha = opacity;
-      context.drawImage(sheet, column * cellWidth, row * cellHeight, cellWidth, cellHeight, 0, 0, canvas.width, canvas.height);
-    };
-
-    const render = (now: number) => {
-      const delta = Math.min(50, now - lastTime);
-      lastTime = now;
-      if (!paused && !reduceMotion) progressRef.current = (progressRef.current + delta / 4200) % 1;
-
-      const position = progressRef.current * sequence.length;
-      const slot = Math.floor(position) % sequence.length;
-      const blend = position - Math.floor(position);
-      const easedBlend = blend * blend * (3 - 2 * blend);
-      const currentFrame = sequence[slot];
-      const nextFrame = sequence[(slot + 1) % sequence.length];
-
-      context.globalAlpha = 1;
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      drawFrame(currentFrame, 1);
-      drawFrame(nextFrame, easedBlend);
-      context.globalAlpha = 1;
-      frameRequest = requestAnimationFrame(render);
-    };
-
-    sheet.onload = () => { frameRequest = requestAnimationFrame(render); };
-    return () => cancelAnimationFrame(frameRequest);
+    const iframe = iframeRef.current;
+    if (iframe?.contentWindow) {
+      iframe.contentWindow.postMessage(JSON.stringify({
+        event: "command",
+        func: paused || reduceMotion ? "pauseVideo" : "playVideo",
+        args: [],
+      }), "https://www.youtube-nocookie.com");
+    }
   }, [paused, reduceMotion]);
 
-  return <canvas ref={canvasRef} width="384" height="512" aria-label="Smooth animated personalized goblet squat" />;
-}
+  if (compact || failed) return <div className="trainer-poster" role="img" aria-label={`${media.title} trainer demonstration`}>
+    <img src={media.posterUrl} alt={`${media.title} professional trainer demonstration`} loading="lazy" decoding="async" />
+    <span aria-hidden="true">▶</span>
+    <small>TRAINER DEMO</small>
+  </div>;
 
-function PersonalGobletSquat({ compact = false, paused = false }: { compact?: boolean; paused?: boolean }) {
-  return <div className={`personal-squat-motion ${compact ? "compact" : ""}`} role="img" aria-label="Personalized goblet squat demonstration">
-    {compact
-      ? <img src="./assets/personal-goblet-squat.webp" alt="Personalized goblet squat start and bottom positions" decoding="async" />
-      : <SmoothSquatCanvas paused={paused} />}
+  const youtubeUrl = media.type === "youtube"
+    ? `https://www.youtube-nocookie.com/embed/${media.videoUrl}?autoplay=${reduceMotion ? 0 : 1}&mute=1&loop=1&playlist=${media.videoUrl}&controls=0&playsinline=1&rel=0&enablejsapi=1`
+    : "";
+
+  return <div className={`trainer-frame ${media.orientation}`}>
+    {media.type === "mp4"
+      ? <video ref={videoRef} autoPlay={!reduceMotion} loop muted playsInline preload="metadata" poster={media.posterUrl} onError={() => setFailed(true)} aria-label={`${media.title} professional trainer video`}>
+          <source src={media.videoUrl} type="video/mp4" />
+        </video>
+      : <iframe ref={iframeRef} src={youtubeUrl} title={`${media.title} professional trainer video`} loading="lazy" allow="autoplay; encrypted-media; picture-in-picture" referrerPolicy="strict-origin-when-cross-origin" onLoad={() => {
+          if (paused || reduceMotion) iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: "command", func: "pauseVideo", args: [] }), "https://www.youtube-nocookie.com");
+        }} />}
+    <a className="trainer-source" href={media.sourceUrl} target="_blank" rel="noreferrer">Video: {media.sourceName} ↗</a>
   </div>;
 }
 
-export default function ExerciseVisual({ kind, compact = false }: Props) {
+export default function ExerciseVisual({ kind, exerciseId, compact = false }: Props) {
   const [paused, setPaused] = useState(false);
+  const media = exerciseId ? exerciseMedia[exerciseId] : undefined;
 
   if (compact) {
-    if (kind === "squat") return <div className="exercise-visual compact realistic"><PersonalGobletSquat compact /></div>;
+    if (media) return <div className="exercise-visual compact trainer-demo"><TrainerMedia media={media} paused compact /></div>;
     return <div className="exercise-visual compact" aria-label="Illustrated start and finish positions">
       <svg viewBox="0 0 290 190" role="img">
         <Pose kind={kind} finish={false} x={14} />
@@ -204,13 +191,13 @@ export default function ExerciseVisual({ kind, compact = false }: Props) {
     </div>;
   }
 
-  return <div className={`exercise-visual animated ${paused ? "paused" : ""}`} aria-label="Looping animated exercise demonstration">
+  return <div className={`exercise-visual animated ${media ? "trainer-demo" : ""} ${paused ? "paused" : ""}`} aria-label={media ? `${media.title} professional trainer demonstration` : "Looping animated exercise demonstration"}>
     <div className="motion-stage">
       <div className="motion-topline">
         <span><i aria-hidden="true" /> FORM DEMO</span>
-        <small>1 CONTROLLED REP</small>
+        <small>{media ? "PRO TRAINER VIDEO" : "1 CONTROLLED REP"}</small>
       </div>
-      {kind === "squat" ? <PersonalGobletSquat paused={paused} /> : <svg viewBox="0 0 180 190" role="img">
+      {media ? <TrainerMedia media={media} paused={paused} /> : <svg viewBox="0 0 180 190" role="img">
           <path className="motion-orbit" d="M28 84C38 23 139 19 153 81" />
           <path className="motion-orbit-arrow" d="M145 73L153 82L160 72" />
           <g className="motion-frame motion-start"><Pose kind={kind} finish={false} x={35} /></g>
