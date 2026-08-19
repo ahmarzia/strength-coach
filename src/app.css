@@ -60,7 +60,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .hero-button { min-width: 210px; border: 0; border-radius: 14px; background: var(--accent); color: #131c16; padding: 15px 18px; display: flex; justify-content: space-between; align-items: center; font-weight: 900; cursor: pointer; box-shadow: 0 8px 30px color-mix(in srgb, var(--accent), transparent 78%); }
 .hero-button:hover { filter: brightness(1.05); transform: translateY(-1px); }
 .hero-visual { position: relative; display: grid; place-items: center; background: radial-gradient(circle at 60% 48%, color-mix(in srgb, var(--accent), transparent 79%), transparent 44%); }
-.hero-visual .exercise-visual { width: min(98%, 550px); border: 0; background: transparent; color: #f3f5f1; transform: scale(1.11); }
+.hero-visual .exercise-visual { width: min(98%, 550px); border: 0; background: transparent; color: #1f2c28; transform: scale(1.11); }
 .hero-visual .exercise-visual text { fill: #7e8b86; }
 .hero-visual .exercise-visual .ground, .hero-visual .exercise-visual .bench { stroke: #52605b; }
 .hero-orbit { position: absolute; right: 26px; top: 27px; width: 104px; height: 104px; border: 1px solid #43504c; border-radius: 50%; display: grid; place-content: center; text-align: center; z-index: 2; }
