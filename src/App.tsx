@@ -232,7 +232,7 @@ export default function Home() {
       <header className="topbar">
         <button className="menu-button" onClick={() => setMenu(!menu)} aria-label="Open menu">☰</button>
         <div><span>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</span><strong>{view === "today" ? goal.tagline : view === "plan" ? `Your ${daysPerWeek}-day ${goal.shortName.toLowerCase()} plan` : "Training history"}</strong></div>
-        <button className="profile" onClick={openPlanBuilder} aria-label="Change personal plan"><span>AZ</span><div><strong>Personal plan</strong><small>{goal.name} · {daysPerWeek} days</small></div></button>
+        <button className="profile" onClick={openPlanBuilder} aria-label="Change personal plan"><span>AZ</span><div><strong>Personal plan</strong><small>{goal.name} · {daysPerWeek} {daysPerWeek === 1 ? "day" : "days"}</small></div></button>
       </header>
 
       {view === "today" && <div className="page-content">
