@@ -130,8 +130,7 @@ function GobletSquatMotion({ paused }: { paused: boolean }) {
 
 function PersonalGobletSquat({ compact = false }: { compact?: boolean }) {
   return <div className={`personal-squat-motion ${compact ? "compact" : ""}`} role="img" aria-label="Personalized goblet squat showing the standing and bottom positions">
-    <img src="./assets/personal-goblet-squat.webp" alt="Personalized goblet squat start and bottom positions" decoding="async" />
-    {!compact && <><span className="personal-pose-focus focus-start" aria-hidden="true" /><span className="personal-pose-focus focus-finish" aria-hidden="true" /></>}
+    <img src={compact ? "./assets/personal-goblet-squat.webp" : "./assets/personal-goblet-squat-sprite.webp"} alt={compact ? "Personalized goblet squat start and bottom positions" : "Animated personalized goblet squat"} decoding="async" />
   </div>;
 }
 
