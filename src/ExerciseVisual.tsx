@@ -169,7 +169,11 @@ function TrainerMedia({ media, paused, started = true, onPlay, compact = false }
         </video>
       : started
         ? <iframe ref={iframeRef} src={youtubeUrl} title={`${media.title} professional trainer video`} loading="eager" allow="autoplay; encrypted-media; picture-in-picture" referrerPolicy="strict-origin-when-cross-origin" onLoad={() => {
-            if (paused || reduceMotion) iframeRef.current?.contentWindow?.postMessage(JSON.stringify({ event: "command", func: "pauseVideo", args: [] }), "https://www.youtube-nocookie.com");
+            iframeRef.current?.contentWindow?.postMessage(JSON.stringify({
+              event: "command",
+              func: paused || reduceMotion ? "pauseVideo" : "playVideo",
+              args: [],
+            }), "https://www.youtube-nocookie.com");
           }} />
         : <button className="trainer-launch" type="button" onClick={onPlay} aria-label={`Play ${media.title} trainer video`}>
             <img src={media.posterUrl} alt={`${media.title} professional trainer demonstration`} />
@@ -231,9 +235,9 @@ export default function ExerciseVisual({ kind, exerciseId, compact = false }: Pr
         <span className="motion-label motion-label-finish">MOVE · SQUEEZE</span>
       </div>
       <div className="motion-progress" aria-hidden="true"><span /></div>
-      <button className="motion-toggle" type="button" onClick={togglePlayback} aria-label={displayPaused ? "Play exercise demonstration" : "Pause exercise demonstration"}>
-        <span aria-hidden="true">{displayPaused ? "▶" : "Ⅱ"}</span> {displayPaused ? "Play" : "Pause"}
-      </button>
+      {(media?.type !== "youtube" || !youtubeStarted) && <button className="motion-toggle" type="button" onClick={togglePlayback} aria-label={displayPaused ? "Play exercise demonstration" : "Pause exercise demonstration"}>
+          <span aria-hidden="true">{displayPaused ? "▶" : "Ⅱ"}</span> {displayPaused ? "Play" : "Pause"}
+        </button>}
     </div>
   </div>;
 }
