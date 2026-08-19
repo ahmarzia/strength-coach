@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 
 type Props = { kind: string; compact?: boolean };
 
@@ -63,6 +64,70 @@ function Pose({ kind, finish, x }: { kind: string; finish: boolean; x: number })
   </g>;
 }
 
+function GobletSquatMotion({ paused }: { paused: boolean }) {
+  const progress = useMotionValue(0);
+  const reduceMotion = useReducedMotion();
+  const playback = useRef<{ pause: () => void; play: () => void; stop: () => void } | null>(null);
+
+  const headX = useTransform(progress, [0, 1], [90, 86]);
+  const headY = useTransform(progress, [0, 1], [36, 55]);
+  const torso = useTransform(progress, [0, 1], ["M90 50Q89 76 90 104", "M86 69Q87 91 90 115"]);
+  const shoulders = useTransform(progress, [0, 1], ["M75 57Q90 51 105 57", "M72 76Q86 69 102 74"]);
+  const leftArm = useTransform(progress, [0, 1], ["M76 58L67 78L82 78", "M73 76L65 96L82 93"]);
+  const rightArm = useTransform(progress, [0, 1], ["M104 58L113 78L98 78", "M101 75L111 96L98 93"]);
+  const leftLeg = useTransform(progress, [0, 1], ["M90 104L71 132L56 166", "M90 115L58 129L51 166"]);
+  const rightLeg = useTransform(progress, [0, 1], ["M90 104L109 132L124 166", "M90 115L122 129L129 166"]);
+  const leftKneeX = useTransform(progress, [0, 1], [71, 58]);
+  const rightKneeX = useTransform(progress, [0, 1], [109, 122]);
+  const kneeY = useTransform(progress, [0, 1], [132, 129]);
+  const dumbbellY = useTransform(progress, [0, 1], [0, 15]);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      progress.set(0);
+      return;
+    }
+    const controls = animate(progress, [0, 0, 1, 1, 0], {
+      duration: 3.6,
+      times: [0, .2, .48, .72, 1],
+      ease: "easeInOut",
+      repeat: Infinity,
+    });
+    playback.current = controls;
+    if (paused) controls.pause();
+    return () => controls.stop();
+  }, [progress, reduceMotion]);
+
+  useEffect(() => {
+    if (!playback.current) return;
+    if (paused) playback.current.pause();
+    else playback.current.play();
+  }, [paused]);
+
+  return <svg className="squat-motion" viewBox="0 0 180 190" role="img" aria-label="Animated goblet squat showing hip and knee movement">
+    <path className="squat-guide" d="M39 167V121M141 167V121" />
+    <path className="squat-depth" d="M43 129H137" />
+    <path className="ground" d="M34 169H146" />
+    <motion.path className="skeleton-limb" d={leftLeg} />
+    <motion.path className="skeleton-limb" d={rightLeg} />
+    <motion.circle className="joint-marker" cx={leftKneeX} cy={kneeY} r="3.5" />
+    <motion.circle className="joint-marker" cx={rightKneeX} cy={kneeY} r="3.5" />
+    <motion.path className="skeleton-torso" d={torso} />
+    <motion.path className="skeleton-shoulders" d={shoulders} />
+    <motion.path className="skeleton-limb" d={leftArm} />
+    <motion.path className="skeleton-limb" d={rightArm} />
+    <motion.g className="goblet-weight" style={{ y: dumbbellY }}>
+      <line x1="82" y1="78" x2="98" y2="78" />
+      <rect x="84" y="70" width="12" height="17" rx="3" />
+      <rect x="78" y="73" width="5" height="11" rx="2" />
+      <rect x="97" y="73" width="5" height="11" rx="2" />
+    </motion.g>
+    <motion.circle className="skeleton-head" cx={headX} cy={headY} r="10" />
+    <path className="skeleton-shoe" d="M44 168H59M121 168H136" />
+    <text className="depth-label" x="145" y="126" textAnchor="end">KNEES OUT · CHEST TALL</text>
+  </svg>;
+}
+
 export default function ExerciseVisual({ kind, compact = false }: Props) {
   const [paused, setPaused] = useState(false);
 
@@ -84,12 +149,12 @@ export default function ExerciseVisual({ kind, compact = false }: Props) {
         <span><i aria-hidden="true" /> FORM DEMO</span>
         <small>1 CONTROLLED REP</small>
       </div>
-      <svg viewBox="0 0 180 190" role="img">
-        <path className="motion-orbit" d="M28 84C38 23 139 19 153 81" />
-        <path className="motion-orbit-arrow" d="M145 73L153 82L160 72" />
-        <g className="motion-frame motion-start"><Pose kind={kind} finish={false} x={35} /></g>
-        <g className="motion-frame motion-finish"><Pose kind={kind} finish x={35} /></g>
-      </svg>
+      {kind === "squat" ? <GobletSquatMotion paused={paused} /> : <svg viewBox="0 0 180 190" role="img">
+          <path className="motion-orbit" d="M28 84C38 23 139 19 153 81" />
+          <path className="motion-orbit-arrow" d="M145 73L153 82L160 72" />
+          <g className="motion-frame motion-start"><Pose kind={kind} finish={false} x={35} /></g>
+          <g className="motion-frame motion-finish"><Pose kind={kind} finish x={35} /></g>
+        </svg>}
       <div className="motion-readout" aria-hidden="true">
         <span className="motion-label motion-label-start">SET POSITION</span>
         <span className="motion-label motion-label-finish">MOVE · SQUEEZE</span>
