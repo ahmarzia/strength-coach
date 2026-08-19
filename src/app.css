@@ -119,6 +119,19 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .motion-toggle span { color: var(--accent, #7e6af2); margin-right: 3px; }
 .exercise-visual.paused *, .exercise-visual.paused *::before, .exercise-visual.paused *::after { animation-play-state: paused !important; }
 
+/* Joint-driven Motion template for the goblet squat. */
+.squat-motion .skeleton-limb, .squat-motion .skeleton-torso, .squat-motion .skeleton-shoulders { fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+.squat-motion .skeleton-limb { stroke-width: 7; }
+.squat-motion .skeleton-torso { stroke-width: 11; }
+.squat-motion .skeleton-shoulders { stroke-width: 6; }
+.squat-motion .skeleton-head { fill: currentColor; }
+.squat-motion .skeleton-shoe { fill: none; stroke: currentColor; stroke-width: 5; stroke-linecap: round; }
+.squat-motion .joint-marker { fill: var(--accent, #7e6af2); stroke: color-mix(in srgb, var(--accent, #7e6af2), white 65%); stroke-width: 2; }
+.squat-motion .goblet-weight { fill: var(--accent, #7e6af2); stroke: color-mix(in srgb, var(--accent, #7e6af2), black 22%); stroke-width: 2.5; stroke-linecap: round; }
+.squat-motion .squat-guide { fill: none; stroke: color-mix(in srgb, var(--accent, #7e6af2), transparent 72%); stroke-width: 1.5; stroke-dasharray: 4 5; }
+.squat-motion .squat-depth { fill: none; stroke: color-mix(in srgb, var(--accent, #7e6af2), transparent 63%); stroke-width: 1.5; stroke-dasharray: 3 5; }
+.squat-motion .depth-label { fill: color-mix(in srgb, var(--accent, #7e6af2), #26312c 34%); font-size: 6px; font-weight: 950; letter-spacing: .08em; }
+
 @keyframes startPose {
   0%, 30% { opacity: 1; filter: blur(0); transform: scale(1); }
   43% { opacity: .32; filter: blur(1.2px); transform: scale(.985); }
