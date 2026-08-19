@@ -1,5 +1,3 @@
-@import "tailwindcss";
-
 :root {
   --ink: #111817;
   --muted: #67706c;
@@ -94,6 +92,51 @@ button:focus-visible, input:focus-visible, summary:focus-visible { outline: 3px 
 .exercise-visual .ground { fill: none; stroke: #c9cec7; stroke-width: 2; stroke-linecap: round; }
 .exercise-visual .motion-arrow { fill: none; stroke: var(--accent, #7e6af2); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .exercise-visual text { fill: #7c8580; font-size: 8px; font-weight: 900; letter-spacing: .16em; }
+
+/* Video-like form demo: two precise key poses loop as one controlled rep. */
+.exercise-visual.animated { position: relative; isolation: isolate; min-height: 330px; background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--accent, #7e6af2), transparent 82%), transparent 43%), linear-gradient(150deg, #fbfcf7 0%, #eef1e9 100%); }
+.motion-stage { position: relative; min-height: inherit; display: grid; place-items: center; padding: 42px 18px 38px; overflow: hidden; }
+.motion-stage::before { content: ""; position: absolute; width: 270px; height: 270px; border: 1px solid color-mix(in srgb, var(--accent, #7e6af2), transparent 78%); border-radius: 50%; opacity: .65; }
+.motion-stage::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: color-mix(in srgb, var(--accent, #7e6af2), transparent 85%); }
+.motion-stage > svg { position: relative; z-index: 1; width: min(100%, 390px); max-height: 320px; overflow: visible; }
+.motion-topline { position: absolute; z-index: 3; inset: 15px 17px auto; display: flex; align-items: center; justify-content: space-between; color: #65706a; font-weight: 900; letter-spacing: .12em; font-size: 9px; }
+.motion-topline span { display: inline-flex; align-items: center; gap: 7px; }
+.motion-topline i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent, #7e6af2); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent, #7e6af2), transparent 80%); animation: demoPulse 1.6s ease-in-out infinite; }
+.motion-topline small { color: #929b96; font-size: 8px; letter-spacing: .1em; }
+.motion-frame { transform-origin: 50% 62%; }
+.motion-start { animation: startPose 3.6s cubic-bezier(.45, 0, .25, 1) infinite; }
+.motion-finish { opacity: 0; animation: finishPose 3.6s cubic-bezier(.45, 0, .25, 1) infinite; }
+.motion-orbit, .motion-orbit-arrow { fill: none; stroke: color-mix(in srgb, var(--accent, #7e6af2), transparent 35%); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 5 8; opacity: .65; animation: orbitDash 3.6s linear infinite; }
+.motion-orbit-arrow { stroke-dasharray: none; }
+.motion-readout { position: absolute; z-index: 3; left: 18px; bottom: 17px; min-width: 122px; height: 24px; overflow: hidden; color: #202925; font-size: 9px; font-weight: 950; letter-spacing: .13em; }
+.motion-label { position: absolute; left: 0; top: 5px; white-space: nowrap; }
+.motion-label-start { animation: startLabel 3.6s ease-in-out infinite; }
+.motion-label-finish { opacity: 0; color: var(--accent, #7e6af2); animation: finishLabel 3.6s ease-in-out infinite; }
+.motion-progress { position: absolute; z-index: 3; left: 18px; right: 92px; bottom: 10px; height: 2px; border-radius: 2px; overflow: hidden; background: #d7dcd4; }
+.motion-progress span { display: block; width: 100%; height: 100%; background: var(--accent, #7e6af2); transform-origin: left; animation: repProgress 3.6s linear infinite; }
+.motion-toggle { position: absolute; z-index: 4; right: 14px; bottom: 11px; min-width: 68px; border: 1px solid #d7dcd4; border-radius: 999px; background: rgba(255,255,255,.86); color: #26312c; padding: 7px 10px; font-size: 9px; font-weight: 900; cursor: pointer; box-shadow: 0 5px 16px rgba(21,30,26,.08); backdrop-filter: blur(8px); }
+.motion-toggle:hover { border-color: var(--accent, #7e6af2); transform: translateY(-1px); }
+.motion-toggle span { color: var(--accent, #7e6af2); margin-right: 3px; }
+.exercise-visual.paused *, .exercise-visual.paused *::before, .exercise-visual.paused *::after { animation-play-state: paused !important; }
+
+@keyframes startPose {
+  0%, 30% { opacity: 1; filter: blur(0); transform: scale(1); }
+  43% { opacity: .32; filter: blur(1.2px); transform: scale(.985); }
+  50%, 82% { opacity: 0; filter: blur(2px); transform: scale(.975); }
+  94% { opacity: .45; filter: blur(1px); }
+  100% { opacity: 1; filter: blur(0); transform: scale(1); }
+}
+@keyframes finishPose {
+  0%, 30% { opacity: 0; filter: blur(2px); transform: scale(.975); }
+  45% { opacity: .48; filter: blur(1px); }
+  52%, 80% { opacity: 1; filter: blur(0); transform: scale(1); }
+  93%, 100% { opacity: 0; filter: blur(2px); transform: scale(.98); }
+}
+@keyframes startLabel { 0%, 36%, 100% { opacity: 1; transform: translateY(0); } 45%, 90% { opacity: 0; transform: translateY(-8px); } }
+@keyframes finishLabel { 0%, 36%, 100% { opacity: 0; transform: translateY(8px); } 50%, 84% { opacity: 1; transform: translateY(0); } 94% { opacity: 0; } }
+@keyframes repProgress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes orbitDash { to { stroke-dashoffset: -39; } }
+@keyframes demoPulse { 0%, 100% { transform: scale(.8); opacity: .65; } 50% { transform: scale(1.15); opacity: 1; } }
 
 .intro-row { display: grid; grid-template-columns: 1.25fr .75fr; align-items: end; gap: 40px; margin: 12px 0 38px; }
 .intro-row h1, .history-heading h1 { margin: 8px 0 12px; font-size: clamp(34px, 4.5vw, 60px); line-height: 1; letter-spacing: -.055em; }
@@ -249,6 +292,10 @@ details[open] .expand { transform: rotate(45deg); background: var(--accent); }
   .hero-button { width: 100%; }
   .hero-visual { min-height: 260px; grid-row: 1; }
   .hero-visual .exercise-visual { transform: scale(1); }
+  .exercise-visual.animated { min-height: 285px; }
+  .motion-stage { padding-inline: 10px; }
+  .motion-stage::before { width: 225px; height: 225px; }
+  .motion-topline small { display: none; }
   .hero-orbit { width: 78px; height: 78px; right: 15px; top: 15px; }
   .section-heading { margin-top: 34px; }
   .preview-grid { grid-template-columns: 1fr; }
@@ -297,4 +344,8 @@ details[open] .expand { transform: rotate(45deg); background: var(--accent); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+  .exercise-visual.animated *, .exercise-visual.animated *::before, .exercise-visual.animated *::after { animation-play-state: paused !important; }
+  .motion-start { opacity: 1; }
+  .motion-finish { opacity: 0; }
+  .motion-toggle { display: none; }
 }
