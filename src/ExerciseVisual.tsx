@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 type Props = { kind: string; compact?: boolean };
 
 function DB({ x, y, rotate = 0 }: { x: number; y: number; rotate?: number }) {
@@ -62,7 +64,40 @@ function Pose({ kind, finish, x }: { kind: string; finish: boolean; x: number })
 }
 
 export default function ExerciseVisual({ kind, compact = false }: Props) {
-  return <div className={`exercise-visual ${compact ? "compact" : ""}`} aria-label="Illustrated start and finish positions">
-    <svg viewBox="0 0 290 190" role="img"><Pose kind={kind} finish={false} x={14} /><path className="motion-arrow" d="M132 91H159M153 85L160 91L153 97" /><Pose kind={kind} finish x={165} /><text x="69" y="181" textAnchor="middle">START</text><text x="220" y="181" textAnchor="middle">FINISH</text></svg>
+  const [paused, setPaused] = useState(false);
+
+  if (compact) {
+    return <div className="exercise-visual compact" aria-label="Illustrated start and finish positions">
+      <svg viewBox="0 0 290 190" role="img">
+        <Pose kind={kind} finish={false} x={14} />
+        <path className="motion-arrow" d="M132 91H159M153 85L160 91L153 97" />
+        <Pose kind={kind} finish x={165} />
+        <text x="69" y="181" textAnchor="middle">START</text>
+        <text x="220" y="181" textAnchor="middle">FINISH</text>
+      </svg>
+    </div>;
+  }
+
+  return <div className={`exercise-visual animated ${paused ? "paused" : ""}`} aria-label="Looping animated exercise demonstration">
+    <div className="motion-stage">
+      <div className="motion-topline">
+        <span><i aria-hidden="true" /> FORM DEMO</span>
+        <small>1 CONTROLLED REP</small>
+      </div>
+      <svg viewBox="0 0 180 190" role="img">
+        <path className="motion-orbit" d="M28 84C38 23 139 19 153 81" />
+        <path className="motion-orbit-arrow" d="M145 73L153 82L160 72" />
+        <g className="motion-frame motion-start"><Pose kind={kind} finish={false} x={35} /></g>
+        <g className="motion-frame motion-finish"><Pose kind={kind} finish x={35} /></g>
+      </svg>
+      <div className="motion-readout" aria-hidden="true">
+        <span className="motion-label motion-label-start">SET POSITION</span>
+        <span className="motion-label motion-label-finish">MOVE · SQUEEZE</span>
+      </div>
+      <div className="motion-progress" aria-hidden="true"><span /></div>
+      <button className="motion-toggle" type="button" onClick={() => setPaused((value) => !value)} aria-label={paused ? "Play exercise demonstration" : "Pause exercise demonstration"}>
+        <span aria-hidden="true">{paused ? "▶" : "Ⅱ"}</span> {paused ? "Play" : "Pause"}
+      </button>
+    </div>
   </div>;
 }
