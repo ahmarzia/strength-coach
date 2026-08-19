@@ -128,10 +128,18 @@ function GobletSquatMotion({ paused }: { paused: boolean }) {
   </svg>;
 }
 
+function PersonalGobletSquat({ compact = false }: { compact?: boolean }) {
+  return <div className={`personal-squat-motion ${compact ? "compact" : ""}`} role="img" aria-label="Personalized goblet squat showing the standing and bottom positions">
+    <img src="./assets/personal-goblet-squat.webp" alt="Personalized goblet squat start and bottom positions" decoding="async" />
+    {!compact && <><span className="personal-pose-focus focus-start" aria-hidden="true" /><span className="personal-pose-focus focus-finish" aria-hidden="true" /></>}
+  </div>;
+}
+
 export default function ExerciseVisual({ kind, compact = false }: Props) {
   const [paused, setPaused] = useState(false);
 
   if (compact) {
+    if (kind === "squat") return <div className="exercise-visual compact realistic"><PersonalGobletSquat compact /></div>;
     return <div className="exercise-visual compact" aria-label="Illustrated start and finish positions">
       <svg viewBox="0 0 290 190" role="img">
         <Pose kind={kind} finish={false} x={14} />
@@ -149,7 +157,7 @@ export default function ExerciseVisual({ kind, compact = false }: Props) {
         <span><i aria-hidden="true" /> FORM DEMO</span>
         <small>1 CONTROLLED REP</small>
       </div>
-      {kind === "squat" ? <GobletSquatMotion paused={paused} /> : <svg viewBox="0 0 180 190" role="img">
+      {kind === "squat" ? <PersonalGobletSquat /> : <svg viewBox="0 0 180 190" role="img">
           <path className="motion-orbit" d="M28 84C38 23 139 19 153 81" />
           <path className="motion-orbit-arrow" d="M145 73L153 82L160 72" />
           <g className="motion-frame motion-start"><Pose kind={kind} finish={false} x={35} /></g>

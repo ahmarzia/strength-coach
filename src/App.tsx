@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import ExerciseVisual from "./ExerciseVisual";
-import { workouts, type Workout } from "./routine";
+import { getExerciseName, getGoalOption, getWorkouts, goalOptions, type PlanGoal, type Workout } from "./routine";
 
 type SetEntry = { weight: string; reps: string; done: boolean };
 type SessionSets = Record<string, SetEntry[]>;
@@ -16,10 +16,14 @@ type SavedSession = {
   sets: SessionSets;
   volume: number;
   completedSets: number;
+  planGoal?: PlanGoal;
+  daysPerWeek?: number;
+  exerciseNames?: Record<string, string>;
 };
 
 const HISTORY_KEY = "az-strength-history-v1";
 const ACTIVE_KEY = "az-strength-active-v1";
+const PLAN_KEY = "az-strength-plan-v1";
 
 const time = (seconds: number) => `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, "0")}`;
 const duration = (seconds: number) => `${Math.max(1, Math.round(seconds / 60))} min`;
@@ -46,8 +50,16 @@ export default function Home() {
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [menu, setMenu] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [planGoal, setPlanGoal] = useState<PlanGoal>("strength");
+  const [daysPerWeek, setDaysPerWeek] = useState(3);
+  const [showPlanBuilder, setShowPlanBuilder] = useState(false);
+  const [draftGoal, setDraftGoal] = useState<PlanGoal>("strength");
+  const [draftDays, setDraftDays] = useState(3);
 
-  const workout = workouts[dayIndex];
+  const workouts = useMemo(() => getWorkouts(planGoal, daysPerWeek), [daysPerWeek, planGoal]);
+  const goal = getGoalOption(planGoal);
+  const safeDayIndex = Math.min(dayIndex, workouts.length - 1);
+  const workout = workouts[safeDayIndex];
   const exercise = workout.exercises[current];
   const totalSets = useMemo(() => workout.exercises.reduce((sum, item) => sum + item.sets, 0), [workout]);
   const doneSets = useMemo(() => Object.values(sets).flat().filter((item) => item.done).length, [sets]);
@@ -57,14 +69,25 @@ export default function Home() {
     const stored = loadHistory();
     setHistory(stored);
     try {
+      const savedPlan = JSON.parse(localStorage.getItem(PLAN_KEY) || "null");
       const draft = JSON.parse(localStorage.getItem(ACTIVE_KEY) || "null");
+      const selectedGoal: PlanGoal = draft?.planGoal || savedPlan?.goal || "strength";
+      const selectedDays = Math.min(5, Math.max(1, Number(draft?.daysPerWeek || savedPlan?.days || 3)));
+      setPlanGoal(selectedGoal); setDraftGoal(selectedGoal); setDaysPerWeek(selectedDays); setDraftDays(selectedDays);
       if (draft?.startedAt && draft?.sets) {
         setDayIndex(draft.dayIndex || 0); setSets(draft.sets); setStartedAt(new Date(draft.startedAt));
         setCurrent(draft.current || 0); setActive(true);
-      } else if (stored.length) setDayIndex((stored[0].dayIndex + 1) % workouts.length);
+      } else if (stored.length && (stored[0].planGoal || "strength") === selectedGoal && (stored[0].daysPerWeek || 3) === selectedDays) {
+        setDayIndex((stored[0].dayIndex + 1) % selectedDays);
+      }
     } catch { /* Ignore an unreadable local draft. */ }
     setHydrated(true);
   }, []);
+
+  useEffect(() => {
+    setDayIndex((index) => Math.min(index, workouts.length - 1));
+    setCurrent(0);
+  }, [workouts.length]);
 
   useEffect(() => {
     if (!active || !startedAt) return;
@@ -81,8 +104,8 @@ export default function Home() {
 
   useEffect(() => {
     if (!hydrated || !active || !startedAt) return;
-    localStorage.setItem(ACTIVE_KEY, JSON.stringify({ dayIndex, sets, startedAt: startedAt.toISOString(), current }));
-  }, [active, current, dayIndex, hydrated, sets, startedAt]);
+    localStorage.setItem(ACTIVE_KEY, JSON.stringify({ dayIndex, sets, startedAt: startedAt.toISOString(), current, planGoal, daysPerWeek }));
+  }, [active, current, dayIndex, daysPerWeek, hydrated, planGoal, sets, startedAt]);
 
   const previousWeight = (exerciseId: string, setIndex: number) => {
     for (const item of history) if (item.sets[exerciseId]?.[setIndex]?.weight) return item.sets[exerciseId][setIndex].weight;
@@ -114,7 +137,8 @@ export default function Home() {
     const volume = completed.reduce((sum, item) => sum + (Number(item.weight) || 0) * (Number(item.reps) || 0), 0);
     const saved: SavedSession = { id: String(Date.now()), dayIndex, workoutTitle: workout.title,
       startedAt: startedAt.toISOString(), finishedAt: new Date().toISOString(), durationSeconds: elapsed,
-      sets, volume, completedSets: completed.length };
+      sets, volume, completedSets: completed.length, planGoal, daysPerWeek,
+      exerciseNames: Object.fromEntries(workout.exercises.map((item) => [item.id, item.name])) };
     const next = [saved, ...history];
     setHistory(next); localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); localStorage.removeItem(ACTIVE_KEY);
     setActive(false); setConfirmEnd(false); setView("history");
@@ -123,13 +147,24 @@ export default function Home() {
   const discard = () => { localStorage.removeItem(ACTIVE_KEY); setActive(false); setConfirmEnd(false); setSets({}); };
 
   const exportCsv = () => {
-    const rows = [["Date", "Workout", "Exercise", "Set", "Weight lb", "Reps", "Completed"]];
-    history.forEach((session) => workouts[session.dayIndex].exercises.forEach((item) => (session.sets[item.id] || []).forEach((entry, index) => rows.push([
-      new Date(session.finishedAt).toLocaleDateString(), session.workoutTitle, item.name, String(index + 1), entry.weight, entry.reps, entry.done ? "Yes" : "No",
+    const rows = [["Date", "Goal", "Days/week", "Workout", "Exercise", "Set", "Weight lb", "Reps", "Completed"]];
+    history.forEach((session) => Object.entries(session.sets).forEach(([exerciseId, entries]) => entries.forEach((entry, index) => rows.push([
+      new Date(session.finishedAt).toLocaleDateString(), getGoalOption(session.planGoal || "strength").name, String(session.daysPerWeek || 3), session.workoutTitle,
+      session.exerciseNames?.[exerciseId] || getExerciseName(exerciseId), String(index + 1), entry.weight, entry.reps, entry.done ? "Yes" : "No",
     ]))));
     const csv = rows.map((row) => row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const link = document.createElement("a"); link.href = url; link.download = "az-strength-history.csv"; link.click(); URL.revokeObjectURL(url);
+  };
+
+  const openPlanBuilder = () => {
+    setDraftGoal(planGoal); setDraftDays(daysPerWeek); setShowPlanBuilder(true); setMenu(false);
+  };
+
+  const applyPlan = () => {
+    setPlanGoal(draftGoal); setDaysPerWeek(draftDays); setDayIndex(0); setCurrent(0);
+    localStorage.setItem(PLAN_KEY, JSON.stringify({ goal: draftGoal, days: draftDays }));
+    setShowPlanBuilder(false); setView("today");
   };
 
   if (active && exercise && sets[exercise.id]) {
@@ -191,31 +226,32 @@ export default function Home() {
         <button className={view === "plan" ? "active" : ""} onClick={() => { setView("plan"); setMenu(false); }}><NavIcon icon="▦" />My plan</button>
         <button className={view === "history" ? "active" : ""} onClick={() => { setView("history"); setMenu(false); }}><NavIcon icon="↗" />History</button>
       </nav>
-      <div className="sidebar-note"><span>3 DAY PLAN</span><strong>Build strength.<br />Stay consistent.</strong><small>Your records save on this device.</small></div>
+      <div className="sidebar-note"><span>{daysPerWeek} DAY PLAN · {goal.name.toUpperCase()}</span><strong>{goal.tagline}</strong><small>Your plan and records save on this device.</small></div>
     </aside>
     <section className="dashboard">
       <header className="topbar">
         <button className="menu-button" onClick={() => setMenu(!menu)} aria-label="Open menu">☰</button>
-        <div><span>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</span><strong>{view === "today" ? "Ready to get stronger?" : view === "plan" ? "Your 3-day program" : "Training history"}</strong></div>
-        <div className="profile"><span>AZ</span><div><strong>Personal plan</strong><small>Muscle + strength</small></div></div>
+        <div><span>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</span><strong>{view === "today" ? goal.tagline : view === "plan" ? `Your ${daysPerWeek}-day ${goal.shortName.toLowerCase()} plan` : "Training history"}</strong></div>
+        <button className="profile" onClick={openPlanBuilder} aria-label="Change personal plan"><span>AZ</span><div><strong>Personal plan</strong><small>{goal.name} · {daysPerWeek} days</small></div></button>
       </header>
 
       {view === "today" && <div className="page-content">
         <section className="workout-hero" style={{ "--accent": workout.accent } as React.CSSProperties}>
-          <div className="hero-copy"><div className="hero-tags"><span>UP NEXT</span><span>≈ 32 MIN</span></div><p>DAY {workout.day} · {workout.label.toUpperCase()}</p><h1>{workout.title}</h1><p className="hero-desc">{workout.description}</p>
-            <div className="hero-stats"><div><strong>{workout.exercises.length}</strong><span>Exercises</span></div><div><strong>{totalSets}</strong><span>Working sets</span></div><div><strong>1–2</strong><span>Reps in reserve</span></div></div>
+          <div className="hero-copy"><div className="hero-tags"><span>UP NEXT</span><span>≈ {workout.minutes} MIN</span></div><p>DAY {workout.day} · {workout.label.toUpperCase()}</p><h1>{workout.title}</h1><p className="hero-desc">{workout.description}</p>
+            <div className="hero-stats"><div><strong>{workout.exercises.length}</strong><span>Exercises</span></div><div><strong>{totalSets}</strong><span>Working sets</span></div><div><strong>{goal.rir}</strong><span>Reps in reserve</span></div></div>
             <button className="hero-button" onClick={() => start()}>Start workout <span>→</span></button>
           </div>
-          <div className="hero-visual"><div className="hero-orbit"><strong>03</strong><small>DAYS<br />PER WEEK</small></div><ExerciseVisual kind={workout.exercises[0].visual} /></div>
+          <div className="hero-visual"><div className="hero-orbit"><strong>{String(daysPerWeek).padStart(2, "0")}</strong><small>DAYS<br />PER WEEK</small></div><ExerciseVisual kind={workout.exercises[0].visual} /></div>
         </section>
-        <div className="section-heading"><div><span>TODAY&apos;S FLOW</span><h2>Six focused movements</h2></div><button onClick={() => setView("plan")}>View full plan →</button></div>
+        <div className="section-heading"><div><span>TODAY&apos;S FLOW</span><h2>{workout.exercises.length} focused movements</h2></div><button onClick={() => setView("plan")}>View full plan →</button></div>
         <section className="preview-grid">{workout.exercises.map((item, index) => <article key={item.id}>
           <div className="preview-meta"><span>{item.pair}</span><small>{item.focus}</small></div><ExerciseVisual kind={item.visual} compact /><h3>{item.name}</h3><p>{item.sets} sets × {item.reps} reps</p><button onClick={() => start(dayIndex, index)}>View guide <span>↗</span></button>
         </article>)}</section>
       </div>}
 
       {view === "plan" && <div className="page-content plan-page">
-        <div className="intro-row"><div><span className="eyebrow">NONCONSECUTIVE DAYS</span><h1>Train three days. Recover between.</h1><p>Use Monday / Wednesday / Friday or any schedule with a rest day between sessions.</p></div><div className="plan-rule"><strong>Progress rule</strong><p>When every set reaches the top of its rep range with good form, add 2.5–5 lb per dumbbell.</p></div></div>
+        <div className="plan-summary"><div><span>{goal.icon}</span><div><small>YOUR CURRENT PLAN</small><strong>{goal.name} · {daysPerWeek} {daysPerWeek === 1 ? "day" : "days"} per week</strong></div></div><button className="button secondary" onClick={openPlanBuilder}>Change plan</button></div>
+        <div className="intro-row"><div><span className="eyebrow">{goal.name.toUpperCase()} PLAN</span><h1>{goal.tagline}</h1><p>{goal.scheduleNote}</p></div><div className="plan-rule"><strong>Progress rule</strong><p>{goal.progressRule}</p></div></div>
         <div className="day-tabs">{workouts.map((item, index) => <button key={item.day} className={dayIndex === index ? "active" : ""} onClick={() => setDayIndex(index)}><span>DAY {item.day}</span><strong>{item.title}</strong></button>)}</div>
         <section className="plan-workout" style={{ "--accent": workout.accent } as React.CSSProperties}>
           <div className="plan-head"><div><span>DAY {workout.day} · {workout.label}</span><h2>{workout.title}</h2><p>{workout.description}</p></div><button className="button primary" onClick={() => start()}>Start day {workout.day} →</button></div>
@@ -230,10 +266,17 @@ export default function Home() {
         <div className="history-heading"><div><span className="eyebrow">YOUR PROGRESS</span><h1>Consistency compounds.</h1><p>Every completed set is stored on this device and included in your totals.</p></div>{history.length > 0 && <button className="button secondary" onClick={exportCsv}>Export CSV ↓</button>}</div>
         <section className="stat-grid"><article><span>Total workouts</span><strong>{history.length}</strong><small>{history.length ? "Keep the chain moving" : "Your first workout starts here"}</small></article><article><span>Working sets</span><strong>{completedSetCount}</strong><small>Completed sets only</small></article><article><span>Training volume</span><strong>{totalVolume.toLocaleString()}</strong><small>lb lifted across logged reps</small></article></section>
         {history.length ? <><section className="volume-card"><div><span className="eyebrow">LAST SIX SESSIONS</span><h2>Volume trend</h2></div><div className="bar-chart">{history.slice(0, 6).reverse().map((item) => <div className="bar-column" key={item.id}><span style={{ height: `${Math.max(8, item.volume / chartMax * 100)}%` }} /><small>D{item.dayIndex + 1}</small></div>)}</div></section>
-          <section className="history-list"><div className="section-heading"><div><span>SESSION LOG</span><h2>Recent workouts</h2></div></div>{history.map((item) => <article key={item.id}><div className="history-date"><strong>{new Date(item.finishedAt).getDate()}</strong><span>{new Date(item.finishedAt).toLocaleDateString("en-US", { month: "short" }).toUpperCase()}</span></div><div><span>DAY {item.dayIndex + 1}</span><strong>{item.workoutTitle}</strong></div><div><small>TIME</small><strong>{duration(item.durationSeconds)}</strong></div><div><small>SETS</small><strong>{item.completedSets}</strong></div><div><small>VOLUME</small><strong>{item.volume.toLocaleString()} lb</strong></div></article>)}</section>
+          <section className="history-list"><div className="section-heading"><div><span>SESSION LOG</span><h2>Recent workouts</h2></div></div>{history.map((item) => <article key={item.id}><div className="history-date"><strong>{new Date(item.finishedAt).getDate()}</strong><span>{new Date(item.finishedAt).toLocaleDateString("en-US", { month: "short" }).toUpperCase()}</span></div><div><span>{getGoalOption(item.planGoal || "strength").shortName.toUpperCase()} · DAY {item.dayIndex + 1}</span><strong>{item.workoutTitle}</strong></div><div><small>TIME</small><strong>{duration(item.durationSeconds)}</strong></div><div><small>SETS</small><strong>{item.completedSets}</strong></div><div><small>VOLUME</small><strong>{item.volume.toLocaleString()} lb</strong></div></article>)}</section>
         </> : <section className="empty-history"><span>↗</span><h2>Your first data point is waiting.</h2><p>Finish a workout and your time, sets and training volume will appear here.</p><button className="button primary" onClick={() => setView("today")}>Choose today&apos;s workout →</button></section>}
       </div>}
     </section>
     <nav className="mobile-nav"><button className={view === "today" ? "active" : ""} onClick={() => setView("today")}><NavIcon icon="⌁" />Today</button><button className={view === "plan" ? "active" : ""} onClick={() => setView("plan")}><NavIcon icon="▦" />Plan</button><button className={view === "history" ? "active" : ""} onClick={() => setView("history")}><NavIcon icon="↗" />History</button></nav>
+    {showPlanBuilder && <div className="modal-backdrop"><section className="plan-builder" role="dialog" aria-modal="true" aria-labelledby="plan-builder-title">
+      <div className="builder-head"><div><span className="eyebrow">PERSONALIZE YOUR WEEK</span><h2 id="plan-builder-title">Choose your plan</h2><p>Pick a goal and the number of days you can train consistently.</p></div><button className="round-button" onClick={() => setShowPlanBuilder(false)} aria-label="Close plan selector">×</button></div>
+      <div className="builder-section"><strong>1. What is your main goal?</strong><div className="goal-options">{goalOptions.map((option) => <button key={option.id} className={draftGoal === option.id ? "active" : ""} onClick={() => setDraftGoal(option.id)}><span>{option.icon}</span><div><strong>{option.name}</strong><small>{option.description}</small></div><i aria-hidden="true">✓</i></button>)}</div></div>
+      <div className="builder-section"><strong>2. How many days can you train?</strong><div className="frequency-options">{[1, 2, 3, 4, 5].map((days) => <button key={days} className={draftDays === days ? "active" : ""} onClick={() => setDraftDays(days)}><strong>{days}</strong><small>{days === 1 ? "day" : "days"}</small></button>)}</div></div>
+      <div className="builder-preview"><div><span>{getGoalOption(draftGoal).icon}</span><div><small>YOUR NEW PLAN</small><strong>{getGoalOption(draftGoal).name} · {draftDays} {draftDays === 1 ? "day" : "days"} / week</strong></div></div><p>{getWorkouts(draftGoal, draftDays).map((item) => item.title).join(" · ")}</p></div>
+      <div className="builder-actions"><button className="button secondary" onClick={() => setShowPlanBuilder(false)}>Cancel</button><button className="button primary" onClick={applyPlan}>Use this plan →</button></div>
+    </section></div>}
   </main>;
 }
