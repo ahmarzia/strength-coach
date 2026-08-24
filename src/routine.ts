@@ -397,8 +397,14 @@ function tailorForEquipment(generated: Workout[], goal: PlanGoal, profile?: Plan
       }
       used.add(id);
       const source = exerciseLibrary.get(id) || exercise;
-      const swingReps = id === "kb-swing" ? (goal === "strength" ? "10–12" : "12–15") : exercise.reps;
-      return { ...source, pair: exercise.pair, sets: exercise.sets, reps: swingReps, rest: exercise.rest };
+      let reps = exercise.reps;
+      if (id.startsWith("kb-")) {
+        const unilateral = ["kb-floor-press", "kb-one-arm-row", "kb-strict-press"].includes(id);
+        if (goal === "strength") reps = id === "kb-halo" ? "8 / direction" : id === "kb-swing" ? "10–12" : unilateral ? "6–10 / side" : id === "kb-reverse-lunge" ? "6–8 / leg" : "6–10";
+        if (goal === "muscle") reps = id === "kb-halo" ? "10 / direction" : id === "kb-swing" ? "12–15" : unilateral ? "8–12 / side" : id === "kb-reverse-lunge" ? "8–12 / leg" : "8–12";
+        if (goal === "fat-loss") reps = id === "kb-halo" ? "8 / direction" : id === "kb-swing" ? "15–20" : unilateral ? "10 / side" : id === "kb-reverse-lunge" ? "10 / leg" : "10–15";
+      }
+      return { ...source, pair: exercise.pair, sets: exercise.sets, reps, rest: exercise.rest };
     });
     const kitLabel = kettlebellOnly ? "Kettlebell" : hasKettlebells ? "Mixed-equipment" : "Home";
     return { ...workout, description: `${workout.description} Tailored for your ${kitLabel.toLowerCase()} setup.`, exercises };
