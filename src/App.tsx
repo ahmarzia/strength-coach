@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import ExerciseVisual from "./ExerciseVisual";
-import { getExerciseName, getGoalOption, getWorkouts, goalOptions, type PlanGoal, type Workout } from "./routine";
+import { defaultHomeEquipment, equipmentOptions, getExerciseName, getGoalOption, getWorkouts, goalOptions, type EquipmentId, type PlanGoal, type TrainingLocation, type Workout } from "./routine";
 
 type SetEntry = { weight: string; reps: string; done: boolean };
 type SessionSets = Record<string, SetEntry[]>;
@@ -19,6 +19,8 @@ type SavedSession = {
   planGoal?: PlanGoal;
   daysPerWeek?: number;
   exerciseNames?: Record<string, string>;
+  trainingLocation?: TrainingLocation;
+  equipment?: EquipmentId[];
 };
 
 const HISTORY_KEY = "az-strength-history-v1";
@@ -55,8 +57,12 @@ export default function Home() {
   const [showPlanBuilder, setShowPlanBuilder] = useState(false);
   const [draftGoal, setDraftGoal] = useState<PlanGoal>("strength");
   const [draftDays, setDraftDays] = useState(3);
+  const [trainingLocation, setTrainingLocation] = useState<TrainingLocation>("home");
+  const [equipment, setEquipment] = useState<EquipmentId[]>(defaultHomeEquipment);
+  const [draftLocation, setDraftLocation] = useState<TrainingLocation>("home");
+  const [draftEquipment, setDraftEquipment] = useState<EquipmentId[]>(defaultHomeEquipment);
 
-  const workouts = useMemo(() => getWorkouts(planGoal, daysPerWeek), [daysPerWeek, planGoal]);
+  const workouts = useMemo(() => getWorkouts(planGoal, daysPerWeek, { location: trainingLocation, equipment }), [daysPerWeek, equipment, planGoal, trainingLocation]);
   const goal = getGoalOption(planGoal);
   const safeDayIndex = Math.min(dayIndex, workouts.length - 1);
   const workout = workouts[safeDayIndex];
@@ -73,7 +79,11 @@ export default function Home() {
       const draft = JSON.parse(localStorage.getItem(ACTIVE_KEY) || "null");
       const selectedGoal: PlanGoal = draft?.planGoal || savedPlan?.goal || "strength";
       const selectedDays = Math.min(5, Math.max(1, Number(draft?.daysPerWeek || savedPlan?.days || 3)));
+      const selectedLocation: TrainingLocation = draft?.trainingLocation || savedPlan?.location || "home";
+      const selectedEquipment: EquipmentId[] = Array.isArray(draft?.equipment || savedPlan?.equipment) ? (draft?.equipment || savedPlan?.equipment) : defaultHomeEquipment;
       setPlanGoal(selectedGoal); setDraftGoal(selectedGoal); setDaysPerWeek(selectedDays); setDraftDays(selectedDays);
+      setTrainingLocation(selectedLocation); setDraftLocation(selectedLocation); setEquipment(selectedEquipment); setDraftEquipment(selectedEquipment);
+      if (!savedPlan?.location && !draft?.trainingLocation) setShowPlanBuilder(true);
       if (draft?.startedAt && draft?.sets) {
         setDayIndex(draft.dayIndex || 0); setSets(draft.sets); setStartedAt(new Date(draft.startedAt));
         setCurrent(draft.current || 0); setActive(true);
@@ -104,8 +114,8 @@ export default function Home() {
 
   useEffect(() => {
     if (!hydrated || !active || !startedAt) return;
-    localStorage.setItem(ACTIVE_KEY, JSON.stringify({ dayIndex, sets, startedAt: startedAt.toISOString(), current, planGoal, daysPerWeek }));
-  }, [active, current, dayIndex, daysPerWeek, hydrated, planGoal, sets, startedAt]);
+    localStorage.setItem(ACTIVE_KEY, JSON.stringify({ dayIndex, sets, startedAt: startedAt.toISOString(), current, planGoal, daysPerWeek, trainingLocation, equipment }));
+  }, [active, current, dayIndex, daysPerWeek, equipment, hydrated, planGoal, sets, startedAt, trainingLocation]);
 
   const previousWeight = (exerciseId: string, setIndex: number) => {
     for (const item of history) if (item.sets[exerciseId]?.[setIndex]?.weight) return item.sets[exerciseId][setIndex].weight;
@@ -137,7 +147,7 @@ export default function Home() {
     const volume = completed.reduce((sum, item) => sum + (Number(item.weight) || 0) * (Number(item.reps) || 0), 0);
     const saved: SavedSession = { id: String(Date.now()), dayIndex, workoutTitle: workout.title,
       startedAt: startedAt.toISOString(), finishedAt: new Date().toISOString(), durationSeconds: elapsed,
-      sets, volume, completedSets: completed.length, planGoal, daysPerWeek,
+      sets, volume, completedSets: completed.length, planGoal, daysPerWeek, trainingLocation, equipment,
       exerciseNames: Object.fromEntries(workout.exercises.map((item) => [item.id, item.name])) };
     const next = [saved, ...history];
     setHistory(next); localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); localStorage.removeItem(ACTIVE_KEY);
@@ -158,14 +168,20 @@ export default function Home() {
   };
 
   const openPlanBuilder = () => {
-    setDraftGoal(planGoal); setDraftDays(daysPerWeek); setShowPlanBuilder(true); setMenu(false);
+    setDraftGoal(planGoal); setDraftDays(daysPerWeek); setDraftLocation(trainingLocation); setDraftEquipment(equipment); setShowPlanBuilder(true); setMenu(false);
   };
 
   const applyPlan = () => {
+    if (draftLocation === "home" && !draftEquipment.some((item) => item === "dumbbells" || item === "kettlebells")) return;
     setPlanGoal(draftGoal); setDaysPerWeek(draftDays); setDayIndex(0); setCurrent(0);
-    localStorage.setItem(PLAN_KEY, JSON.stringify({ goal: draftGoal, days: draftDays }));
+    setTrainingLocation(draftLocation); setEquipment(draftLocation === "gym" ? [] : draftEquipment);
+    localStorage.setItem(PLAN_KEY, JSON.stringify({ goal: draftGoal, days: draftDays, location: draftLocation, equipment: draftLocation === "gym" ? [] : draftEquipment }));
     setShowPlanBuilder(false); setView("today");
   };
+
+  const toggleDraftEquipment = (id: EquipmentId) => setDraftEquipment((items) => items.includes(id) ? items.filter((item) => item !== id) : [...items, id]);
+  const draftHasWeights = draftLocation === "gym" || draftEquipment.some((item) => item === "dumbbells" || item === "kettlebells");
+  const setupLabel = trainingLocation === "gym" ? "Gym equipment" : equipment.map((id) => equipmentOptions.find((item) => item.id === id)?.name).filter(Boolean).join(" + ");
 
   if (active && exercise && sets[exercise.id]) {
     const currentSets = sets[exercise.id];
@@ -226,13 +242,13 @@ export default function Home() {
         <button className={view === "plan" ? "active" : ""} onClick={() => { setView("plan"); setMenu(false); }}><NavIcon icon="▦" />My plan</button>
         <button className={view === "history" ? "active" : ""} onClick={() => { setView("history"); setMenu(false); }}><NavIcon icon="↗" />History</button>
       </nav>
-      <div className="sidebar-note"><span>{daysPerWeek} DAY PLAN · {goal.name.toUpperCase()}</span><strong>{goal.tagline}</strong><small>Your plan and records save on this device.</small></div>
+      <div className="sidebar-note"><span>{daysPerWeek} DAY PLAN · {goal.name.toUpperCase()}</span><strong>{goal.tagline}</strong><small>{trainingLocation === "gym" ? "Gym plan" : "Home plan"} · Saved on this device.</small></div>
     </aside>
     <section className="dashboard">
       <header className="topbar">
         <button className="menu-button" onClick={() => setMenu(!menu)} aria-label="Open menu">☰</button>
         <div><span>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</span><strong>{view === "today" ? goal.tagline : view === "plan" ? `Your ${daysPerWeek}-day ${goal.shortName.toLowerCase()} plan` : "Training history"}</strong></div>
-        <button className="profile" onClick={openPlanBuilder} aria-label="Change personal plan"><span>AZ</span><div><strong>Personal plan</strong><small>{goal.name} · {daysPerWeek} {daysPerWeek === 1 ? "day" : "days"}</small></div></button>
+        <button className="profile" onClick={openPlanBuilder} aria-label="Change personal plan"><span>AZ</span><div><strong>Personal plan</strong><small>{trainingLocation === "gym" ? "Gym" : "Home"} · {goal.name} · {daysPerWeek} {daysPerWeek === 1 ? "day" : "days"}</small></div></button>
       </header>
 
       {view === "today" && <div className="page-content">
@@ -250,7 +266,7 @@ export default function Home() {
       </div>}
 
       {view === "plan" && <div className="page-content plan-page">
-        <div className="plan-summary"><div><span>{goal.icon}</span><div><small>YOUR CURRENT PLAN</small><strong>{goal.name} · {daysPerWeek} {daysPerWeek === 1 ? "day" : "days"} per week</strong></div></div><button className="button secondary" onClick={openPlanBuilder}>Change plan</button></div>
+        <div className="plan-summary"><div><span>{goal.icon}</span><div><small>YOUR CURRENT PLAN · {trainingLocation.toUpperCase()}</small><strong>{goal.name} · {daysPerWeek} {daysPerWeek === 1 ? "day" : "days"} per week</strong><small className="setup-label">{setupLabel}</small></div></div><button className="button secondary" onClick={openPlanBuilder}>Change plan</button></div>
         <div className="intro-row"><div><span className="eyebrow">{goal.name.toUpperCase()} PLAN</span><h1>{goal.tagline}</h1><p>{goal.scheduleNote}</p></div><div className="plan-rule"><strong>Progress rule</strong><p>{goal.progressRule}</p></div></div>
         <div className="day-tabs">{workouts.map((item, index) => <button key={item.day} className={dayIndex === index ? "active" : ""} onClick={() => setDayIndex(index)}><span>DAY {item.day}</span><strong>{item.title}</strong></button>)}</div>
         <section className="plan-workout" style={{ "--accent": workout.accent } as React.CSSProperties}>
@@ -272,11 +288,16 @@ export default function Home() {
     </section>
     <nav className="mobile-nav"><button className={view === "today" ? "active" : ""} onClick={() => setView("today")}><NavIcon icon="⌁" />Today</button><button className={view === "plan" ? "active" : ""} onClick={() => setView("plan")}><NavIcon icon="▦" />Plan</button><button className={view === "history" ? "active" : ""} onClick={() => setView("history")}><NavIcon icon="↗" />History</button></nav>
     {showPlanBuilder && <div className="modal-backdrop"><section className="plan-builder" role="dialog" aria-modal="true" aria-labelledby="plan-builder-title">
-      <div className="builder-head"><div><span className="eyebrow">PERSONALIZE YOUR WEEK</span><h2 id="plan-builder-title">Choose your plan</h2><p>Pick a goal and the number of days you can train consistently.</p></div><button className="round-button" onClick={() => setShowPlanBuilder(false)} aria-label="Close plan selector">×</button></div>
-      <div className="builder-section"><strong>1. What is your main goal?</strong><div className="goal-options">{goalOptions.map((option) => <button key={option.id} className={draftGoal === option.id ? "active" : ""} onClick={() => setDraftGoal(option.id)}><span>{option.icon}</span><div><strong>{option.name}</strong><small>{option.description}</small></div><i aria-hidden="true">✓</i></button>)}</div></div>
-      <div className="builder-section"><strong>2. How many days can you train?</strong><div className="frequency-options">{[1, 2, 3, 4, 5].map((days) => <button key={days} className={draftDays === days ? "active" : ""} onClick={() => setDraftDays(days)}><strong>{days}</strong><small>{days === 1 ? "day" : "days"}</small></button>)}</div></div>
-      <div className="builder-preview"><div><span>{getGoalOption(draftGoal).icon}</span><div><small>YOUR NEW PLAN</small><strong>{getGoalOption(draftGoal).name} · {draftDays} {draftDays === 1 ? "day" : "days"} / week</strong></div></div><p>{getWorkouts(draftGoal, draftDays).map((item) => item.title).join(" · ")}</p></div>
-      <div className="builder-actions"><button className="button secondary" onClick={() => setShowPlanBuilder(false)}>Cancel</button><button className="button primary" onClick={applyPlan}>Use this plan →</button></div>
+      <div className="builder-head"><div><span className="eyebrow">PERSONALIZE YOUR WEEK</span><h2 id="plan-builder-title">Build your plan</h2><p>Tell us where you train and what equipment is actually available.</p></div><button className="round-button" onClick={() => setShowPlanBuilder(false)} aria-label="Close plan selector">×</button></div>
+      <div className="builder-section"><strong>1. Where do you train?</strong><div className="location-options">
+        <button className={draftLocation === "home" ? "active" : ""} onClick={() => setDraftLocation("home")}><span>⌂</span><div><strong>At home</strong><small>Build around the equipment you own.</small></div><i aria-hidden="true">✓</i></button>
+        <button className={draftLocation === "gym" ? "active" : ""} onClick={() => setDraftLocation("gym")}><span>▦</span><div><strong>At a gym</strong><small>Assume a complete strength-training setup.</small></div><i aria-hidden="true">✓</i></button>
+      </div></div>
+      {draftLocation === "home" && <div className="builder-section"><strong>2. What equipment do you have?</strong><div className="equipment-options">{equipmentOptions.map((option) => <button key={option.id} className={draftEquipment.includes(option.id) ? "active" : ""} onClick={() => toggleDraftEquipment(option.id)}><span>{option.icon}</span><div><strong>{option.name}</strong><small>{option.note}</small></div><i aria-hidden="true">✓</i></button>)}</div>{!draftHasWeights && <p className="builder-warning">Choose dumbbells or kettlebells so we can build a complete strength plan.</p>}</div>}
+      <div className="builder-section"><strong>{draftLocation === "home" ? "3" : "2"}. What is your main goal?</strong><div className="goal-options">{goalOptions.map((option) => <button key={option.id} className={draftGoal === option.id ? "active" : ""} onClick={() => setDraftGoal(option.id)}><span>{option.icon}</span><div><strong>{option.name}</strong><small>{option.description}</small></div><i aria-hidden="true">✓</i></button>)}</div></div>
+      <div className="builder-section"><strong>{draftLocation === "home" ? "4" : "3"}. How many days can you train?</strong><div className="frequency-options">{[1, 2, 3, 4, 5].map((days) => <button key={days} className={draftDays === days ? "active" : ""} onClick={() => setDraftDays(days)}><strong>{days}</strong><small>{days === 1 ? "day" : "days"}</small></button>)}</div></div>
+      <div className="builder-preview"><div><span>{getGoalOption(draftGoal).icon}</span><div><small>{draftLocation.toUpperCase()} · YOUR NEW PLAN</small><strong>{getGoalOption(draftGoal).name} · {draftDays} {draftDays === 1 ? "day" : "days"} / week</strong></div></div><p>{draftHasWeights ? getWorkouts(draftGoal, draftDays, { location: draftLocation, equipment: draftEquipment }).map((item) => item.title).join(" · ") : "Select your main weights to preview the plan."}</p></div>
+      <div className="builder-actions"><button className="button secondary" onClick={() => setShowPlanBuilder(false)}>Cancel</button><button className="button primary" disabled={!draftHasWeights} onClick={applyPlan}>Use this plan →</button></div>
     </section></div>}
   </main>;
 }

@@ -24,6 +24,18 @@ export type Workout = {
 };
 
 export type PlanGoal = "strength" | "muscle" | "fat-loss";
+export type TrainingLocation = "home" | "gym";
+export type EquipmentId = "dumbbells" | "kettlebells" | "bench" | "ez-bar";
+export type PlanProfile = { location: TrainingLocation; equipment: EquipmentId[] };
+
+export const equipmentOptions: { id: EquipmentId; name: string; icon: string; note: string }[] = [
+  { id: "dumbbells", name: "Dumbbells", icon: "DB", note: "Fixed or adjustable" },
+  { id: "kettlebells", name: "Kettlebells", icon: "KB", note: "One or more sizes" },
+  { id: "bench", name: "Workout bench", icon: "▰", note: "Flat or adjustable" },
+  { id: "ez-bar", name: "EZ bar", icon: "⌁", note: "Bar with plates" },
+];
+
+export const defaultHomeEquipment: EquipmentId[] = ["dumbbells", "bench", "ez-bar"];
 
 export type GoalOption = {
   id: PlanGoal;
@@ -175,10 +187,65 @@ export const workouts: Workout[] = [
   },
 ];
 
+const equipmentExercises: Exercise[] = [
+  ex("kb-goblet-squat", "Kettlebell Goblet Squat", "A1", 3, "6–10", 60, "Quads · Glutes · Core", "1 kettlebell", "squat",
+    ["Hold the kettlebell by its horns close to your chest.", "Brace and sit down between your legs while keeping your whole foot planted.", "Drive through the floor and stand tall without leaning back."],
+    ["Bell close", "Knees follow toes", "Chest tall"], "Letting the bell pull your chest forward or your heels lift."),
+  ex("kb-deadlift", "Kettlebell Deadlift", "A1", 3, "6–10", 60, "Hamstrings · Glutes · Back", "1–2 kettlebells", "hinge",
+    ["Stand over the bell with its handle between your feet.", "Push your hips back, brace, and grip the handle with a long spine.", "Push the floor away and finish tall, then hinge to return the bell softly."],
+    ["Hips travel back", "Bell stays close", "Stand tall"], "Squatting too low or rounding your back to reach the bell."),
+  ex("kb-swing", "Two-hand Kettlebell Swing", "A1", 3, "10–15", 45, "Glutes · Hamstrings · Conditioning", "1 kettlebell", "hinge",
+    ["Place the bell slightly ahead of you and hike it back between your thighs.", "Snap your hips forward while your arms stay relaxed.", "Let the bell float to chest height, then guide it into the next hinge."],
+    ["Hike then snap", "Arms stay loose", "Bell floats"], "Turning the swing into a front raise or bending deeply at the knees."),
+  ex("kb-floor-press", "Single-arm Kettlebell Floor Press", "A1", 3, "6–10 / side", 60, "Chest · Triceps · Core", "1 kettlebell + floor space", "bench-neutral",
+    ["Lie on the floor with the bell safely racked at one shoulder and that knee bent.", "Press the bell over your shoulder while keeping your wrist stacked.", "Lower until your upper arm gently meets the floor, then repeat."],
+    ["Wrist stacked", "Shoulder packed", "Ribs down"], "Letting the bell pull your wrist backward or bouncing your elbow off the floor."),
+  ex("kb-one-arm-row", "Single-arm Kettlebell Row", "A1", 3, "8–12 / side", 60, "Lats · Upper back · Biceps", "1 kettlebell", "one-row",
+    ["Take a staggered stance and hinge with a long, braced spine.", "Pull the bell toward your hip without rotating your shoulders.", "Lower until your arm is long while keeping the hinge position."],
+    ["Elbow to hip", "Torso stays square", "Long reach"], "Shrugging the bell upward or twisting to finish the rep."),
+  ex("kb-strict-press", "Single-arm Kettlebell Press", "A1", 3, "6–10 / side", 60, "Shoulders · Triceps · Core", "1 kettlebell", "overhead",
+    ["Stand tall with the bell in the rack position and your wrist straight.", "Brace your glutes and stomach, then press the bell overhead.", "Finish with your arm beside your ear and lower smoothly to the rack."],
+    ["Wrist straight", "Ribs down", "Finish overhead"], "Leaning sideways or using your legs to start a strict press."),
+  ex("kb-reverse-lunge", "Kettlebell Reverse Lunge", "A1", 3, "8 / leg", 60, "Quads · Glutes · Balance", "1 kettlebell", "lunge",
+    ["Hold the bell at your chest and stand tall.", "Step one foot back and lower the rear knee under control.", "Drive through the entire front foot to return to standing."],
+    ["Bell close", "Front foot planted", "Step back quietly"], "Taking too short a step or pushing mainly from the rear foot."),
+  ex("kb-halo", "Kettlebell Halo", "A1", 2, "8–10 / direction", 45, "Shoulders · Upper back · Core", "1 light kettlebell", "lateral",
+    ["Hold the bell by its horns upside down in front of your chest.", "Circle it slowly around your head while keeping your ribs down.", "Return to the front, then repeat in the opposite direction."],
+    ["Move slowly", "Bell stays close", "Torso still"], "Using a heavy bell or moving your head and ribs to create space."),
+  ex("db-floor-press", "Dumbbell Floor Press", "A1", 3, "8–12", 60, "Chest · Triceps", "2 dumbbells + floor space", "bench",
+    ["Sit with the dumbbells on your thighs, then roll back and bring them over your chest.", "Lower until your upper arms gently touch the floor.", "Press the weights over your shoulders while keeping your wrists stacked."],
+    ["Elbows 30–45°", "Wrists stacked", "Pause on floor"], "Bouncing your elbows or letting your shoulders roll forward."),
+];
+
 type Prescription = [id: string, pair: string, sets: number, reps: string, rest: number];
 type WorkoutTemplate = Omit<Workout, "day" | "exercises"> & { exercises: Prescription[] };
 
-const exerciseLibrary = new Map(workouts.flatMap((workout) => workout.exercises.map((exercise) => [exercise.id, exercise])));
+const exerciseLibrary = new Map([...workouts.flatMap((workout) => workout.exercises), ...equipmentExercises].map((exercise) => [exercise.id, exercise]));
+
+const requirements: Record<string, EquipmentId[]> = {
+  "goblet-squat": ["dumbbells"], "flat-bench": ["dumbbells", "bench"], "one-arm-row": ["dumbbells"],
+  "romanian-deadlift": ["dumbbells"], "lateral-raise": ["dumbbells"], "rear-delt-raise": ["dumbbells"],
+  "split-squat": ["dumbbells", "bench"], "overhead-press": ["dumbbells", "bench"], "hip-thrust": ["dumbbells", "bench"],
+  "ez-row": ["ez-bar"], "ez-curl": ["ez-bar"], "triceps-extension": ["dumbbells", "bench"],
+  "sumo-deadlift": ["dumbbells"], "neutral-bench": ["dumbbells", "bench"], "reverse-lunge": ["dumbbells"],
+  "two-db-row": ["dumbbells"], "hammer-curl": ["dumbbells"], "skull-crusher": ["dumbbells", "bench"],
+  "db-floor-press": ["dumbbells"],
+  "kb-goblet-squat": ["kettlebells"], "kb-deadlift": ["kettlebells"], "kb-swing": ["kettlebells"],
+  "kb-floor-press": ["kettlebells"], "kb-one-arm-row": ["kettlebells"], "kb-strict-press": ["kettlebells"],
+  "kb-reverse-lunge": ["kettlebells"], "kb-halo": ["kettlebells"],
+};
+
+const kettlebellSubstitutions: Record<string, string> = {
+  "goblet-squat": "kb-goblet-squat", "flat-bench": "kb-floor-press", "one-arm-row": "kb-one-arm-row",
+  "romanian-deadlift": "kb-deadlift", "lateral-raise": "kb-halo", "rear-delt-raise": "kb-halo",
+  "split-squat": "kb-reverse-lunge", "overhead-press": "kb-strict-press", "hip-thrust": "kb-deadlift",
+  "ez-row": "kb-one-arm-row", "ez-curl": "kb-one-arm-row", "triceps-extension": "kb-floor-press",
+  "sumo-deadlift": "kb-deadlift", "neutral-bench": "kb-floor-press", "reverse-lunge": "kb-reverse-lunge",
+  "two-db-row": "kb-one-arm-row", "hammer-curl": "kb-one-arm-row", "skull-crusher": "kb-floor-press",
+};
+
+const mixedKettlebellMoves = new Set(["goblet-squat", "romanian-deadlift", "sumo-deadlift", "one-arm-row", "overhead-press", "reverse-lunge"]);
+const kettlebellRotation = ["kb-goblet-squat", "kb-floor-press", "kb-one-arm-row", "kb-deadlift", "kb-strict-press", "kb-reverse-lunge", "kb-halo", "kb-swing"];
 
 const template = (
   title: string,
@@ -298,15 +365,56 @@ export function getGoalOption(goal: PlanGoal) {
   return goalOptions.find((option) => option.id === goal) || goalOptions[0];
 }
 
-export function getWorkouts(goal: PlanGoal, days: number): Workout[] {
+function tailorForEquipment(generated: Workout[], goal: PlanGoal, profile?: PlanProfile): Workout[] {
+  if (!profile || profile.location === "gym") return generated;
+  const selected = new Set(profile.equipment);
+  const hasKettlebells = selected.has("kettlebells");
+  const hasDumbbells = selected.has("dumbbells");
+  const kettlebellOnly = hasKettlebells && !hasDumbbells;
+
+  const selectId = (id: string) => {
+    if (hasKettlebells && (kettlebellOnly || mixedKettlebellMoves.has(id))) return kettlebellSubstitutions[id] || id;
+    if ((requirements[id] || []).every((item) => selected.has(item))) return id;
+    if (hasKettlebells) return kettlebellSubstitutions[id] || "kb-goblet-squat";
+    if (hasDumbbells) {
+      if (id === "ez-row") return "two-db-row";
+      if (id === "ez-curl") return "hammer-curl";
+      if (["flat-bench", "neutral-bench", "triceps-extension", "skull-crusher"].includes(id)) return "db-floor-press";
+      if (id === "split-squat") return "reverse-lunge";
+      if (id === "hip-thrust") return "romanian-deadlift";
+      if (id === "overhead-press") return "lateral-raise";
+    }
+    return id;
+  };
+
+  return generated.map((workout) => {
+    const used = new Set<string>();
+    const exercises = workout.exercises.map((exercise) => {
+      let id = selectId(exercise.id);
+      if (hasKettlebells && used.has(id)) {
+        const alternate = kettlebellRotation.find((candidate) => !used.has(candidate));
+        if (alternate) id = alternate;
+      }
+      used.add(id);
+      const source = exerciseLibrary.get(id) || exercise;
+      const swingReps = id === "kb-swing" ? (goal === "strength" ? "10–12" : "12–15") : exercise.reps;
+      return { ...source, pair: exercise.pair, sets: exercise.sets, reps: swingReps, rest: exercise.rest };
+    });
+    const kitLabel = kettlebellOnly ? "Kettlebell" : hasKettlebells ? "Mixed-equipment" : "Home";
+    return { ...workout, description: `${workout.description} Tailored for your ${kitLabel.toLowerCase()} setup.`, exercises };
+  });
+}
+
+export function getWorkouts(goal: PlanGoal, days: number, profile?: PlanProfile): Workout[] {
   const safeDays = Math.min(5, Math.max(1, Math.round(days)));
-  if (goal === "strength" && safeDays === 3) return workouts.map((workout) => ({
-    ...workout,
-    exercises: workout.exercises.map((exercise) => ({ ...exercise })),
-  }));
+  let generated: Workout[];
+  if (goal === "strength" && safeDays === 3) {
+    generated = workouts.map((workout) => ({ ...workout, exercises: workout.exercises.map((exercise) => ({ ...exercise })) }));
+    return tailorForEquipment(generated, goal, profile);
+  }
 
   const catalog = goal === "strength" ? strengthTemplates : goal === "muscle" ? muscleTemplates : fatLossTemplates;
-  return schedules[goal][safeDays].map((key, index) => {
+  generated = schedules[goal][safeDays].map((key, index) => {
     const selected = catalog[key];
     return {
       ...selected,
@@ -318,6 +426,7 @@ export function getWorkouts(goal: PlanGoal, days: number): Workout[] {
       }),
     };
   });
+  return tailorForEquipment(generated, goal, profile);
 }
 
 export function getExerciseName(id: string) {

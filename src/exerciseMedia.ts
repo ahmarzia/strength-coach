@@ -47,4 +47,13 @@ export const exerciseMedia: Record<string, ExerciseMedia> = {
   "two-db-row": youtube("Two-dumbbell Row", "--gDUDFKx6Q", "Bodybuilding.com"),
   "hammer-curl": ymove("Dumbbell Hammer Curl", "b11e6c6f-b2e8-44ca-95dc-adf0dcd34426"),
   "skull-crusher": youtube("Dumbbell Skull Crusher", "MO_03opCc0g", "ScottHermanFitness"),
+  "kb-goblet-squat": youtube("Kettlebell Goblet Squat", "aNDUbH_Uv4g", "Zack Henderson"),
+  "kb-deadlift": youtube("Kettlebell Deadlift", "sDbMsk3d6F4", "Kettlebell trainer"),
+  "kb-swing": youtube("Two-hand Kettlebell Swing", "1Qi0NQW89Oc", "KB Fit Britt"),
+  "kb-floor-press": youtube("Single-arm Kettlebell Floor Press", "B340QckIfJM", "Kettlebell trainer"),
+  "kb-one-arm-row": youtube("Single-arm Kettlebell Row", "l5qelXL5nfs", "Trainer demonstration"),
+  "kb-strict-press": youtube("Single-arm Kettlebell Press", "gjr-QAdsq4o", "Onnit"),
+  "kb-reverse-lunge": youtube("Kettlebell Reverse Lunge", "2D4xApe-UFU", "Trainer demonstration"),
+  "kb-halo": youtube("Kettlebell Halo", "z8f3M4xImto", "NASM trainer"),
+  "db-floor-press": youtube("Dumbbell Floor Press", "Bx4QPVH-J1g", "Colossus Fitness"),
 };
